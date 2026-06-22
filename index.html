@@ -358,21 +358,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 // ─── SHEET IDs ────────────────────────────────────────────────
 const SHEETS = [
   {id:'1HtPxkoskfVg9V68L3n4li4X-NGYxqCk_poTD5ZuK12A',month:'2025-01',label:'Jan 2025'},
-  {id:'',month:'2025-02',label:'Feb 2025'},
-  {id:'',month:'2025-03',label:'Mar 2025'},
-  {id:'',month:'2025-04',label:'Apr 2025'},
-  {id:'',month:'2025-05',label:'May 2025'},
-  {id:'',month:'2025-06',label:'Jun 2025'},
+  {id:'1guXCSRKYqBXVVjtrrkeH2gBxSMpU5Zx4_u5U0L46vS8',month:'2025-02',label:'Feb 2025'},
+  {id:'1flH1Aj2cKSRBF0v02ywH3jWPhBo8MA4QcMVnEYloYXY',month:'2025-03',label:'Mar 2025'},
+  {id:'1i4H9d0hiip3m4iXoumAeSeem3tGDbkjcMP8a6wgPzxE',month:'2025-04',label:'Apr 2025'},
+  {id:'1ot7ZBmQBqrsfNx0TopEFUIJuYx0dJ_PSUS-In-PQM8o',month:'2025-05',label:'May 2025'},
+  {id:'1Bjv6-ninl3fvml_TFHCsdBT11Xdto8kqT9GGh4tueYA',month:'2025-06',label:'Jun 2025'},
   {id:'1ZQE292LP1heEL2FKc6JYcP0zsJ-Sd4FXwllqD1RgD-w',month:'2025-07',label:'Jul 2025'},
   {id:'1VUp9BPpP6mdl2QC_H3dhVutj1i1t9MK-9GcOBFW94XU',month:'2025-08',label:'Aug 2025'},
-  {id:'',month:'2025-09',label:'Sep 2025'},
-  {id:'',month:'2025-10',label:'Oct 2025'},
+  {id:'1HYKuwTs1kx_LHk_K0vPGIfgYLUO2rBAncH4DcgdPq7w',month:'2025-09',label:'Sep 2025'},
+  {id:'1rKOD5xUIlMHrRzaQPJHa_dhey-nQJ_S9Wl8vJfsjBMM',month:'2025-10',label:'Oct 2025'},
   {id:'1ncxwZAaH6CEyOPI2JhJV4KOckjs7zZLHq6Ue3lR-YQs',month:'2025-11',label:'Nov 2025'},
   {id:'1rBYD2pvaoQYPUPma3q6Rb2G_yMi5KFVnp4cFCUE4WUc',month:'2025-12',label:'Dec 2025'},
   {id:'1jjN_BuiB9wPV1IG0yrlqzQq0wrx0C1cAO8ZC4qIkbkg',month:'2026-01',label:'Jan 2026'},
   {id:'1lyN4Ab054KCbyJzPWK5Zxz_EnOsS2wtppu4hRnhHy2o',month:'2026-02',label:'Feb 2026'},
   {id:'1_O4vH4YiEH-Lc2CQjUFuH_A52uFqCoueZ7Lnm-JcXfg',month:'2026-03',label:'Mar 2026'},
-  {id:'',month:'2026-04',label:'Apr 2026'},
+  {id:'1a_9n3bZt-pS4-74mFaVwJMgvang6fLS7PS-stwViUGU',month:'2026-04',label:'Apr 2026'},
   {id:'1fu41ziK5rerKpgaA3v-J0oTtDWwM25HJb747GOk5RzA',month:'2026-05',label:'May 2026'},
   {id:'1sgMnCexmSRyyVVubasfhkUZ5IaOQI2Za2iw1siSwaV0',month:'2026-06',label:'Jun 2026'},
 ];
@@ -494,11 +494,17 @@ function showError(){
 }
 
 async function fetchCSV(fileId,month){
+  // Use the published CSV export URL - works from https:// origins
   const url='https://docs.google.com/spreadsheets/d/'+fileId+'/export?format=csv&gid=0';
-  const resp=await fetch(url);
+  let resp;
+  try {
+    resp = await fetch(url, {redirect:'follow'});
+  } catch(e) {
+    throw new Error('Network error: '+e.message);
+  }
   if(!resp.ok) throw new Error('HTTP '+resp.status);
   const text=await resp.text();
-  if(text.trim().startsWith('<')) throw new Error('Got HTML');
+  if(text.trim().startsWith('<')) throw new Error('Got HTML - sheet not published to web');
   const rows=parseCSV(text);
   if(rows.length<2) return [];
   return rows.slice(1).map(function(r){r._month=month;return r;});
