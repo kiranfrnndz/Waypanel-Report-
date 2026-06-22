@@ -762,26 +762,29 @@ function renderCallDrivers(){
   const barCols=['#1859A9','#1859A9','#1A7F4B','#D97706','#D97706','#B91C1C','#6D28D9','#64748B'];
 
   function makeRow(entry,idx){
-    const [reason,data]=entry;
-    const cnt=data.count;
-    const bw=Math.round(cnt/maxV*100);
-    const col=barCols[Math.min(idx,barCols.length-1)];
-    const rid='sub_'+idx;
-    // Top sub-reasons sorted
-    const subs=[...data.subs.entries()].sort(function(a,b){return b[1]-a[1];});
-    const subRows=subs.map(function(s){
-      return '<tr style="background:#F8FAFC"><td style="padding-left:28px;color:var(--muted);font-size:11px;border-bottom:1px solid #F0F1F5" colspan="2"><i class="ti ti-corner-down-right" style="font-size:10px;margin-right:4px;color:var(--hint)"></i>'+s[0]+'</td>'
+    var reason=entry[0], data=entry[1];
+    var cnt=data.count;
+    var bw=Math.round(cnt/maxV*100);
+    var col=barCols[Math.min(idx,barCols.length-1)];
+    var rid='sub_'+idx;
+    var subs=[...data.subs.entries()].sort(function(a,b){return b[1]-a[1];});
+    var subRows=subs.map(function(s){
+      return '<tr style="background:#F8FAFC"><td style="padding-left:28px;color:var(--muted);font-size:11px;border-bottom:1px solid #F0F1F5" colspan="2">'
+        +'<i class="ti ti-corner-down-right" style="font-size:10px;margin-right:4px;color:var(--hint)"></i>'+s[0]+'</td>'
         +'<td style="font-size:11px;color:var(--muted);background:#F8FAFC;border-bottom:1px solid #F0F1F5">'+fmt(s[1])+'</td>'
         +'<td style="font-size:11px;color:var(--muted);background:#F8FAFC;border-bottom:1px solid #F0F1F5">'+pct(s[1],cnt)+'</td>'
         +'<td style="background:#F8FAFC;border-bottom:1px solid #F0F1F5"></td></tr>';
     }).join('');
-    return '<tr style="cursor:pointer" onclick="toggleSub(''+rid+'')">'
-      +'<td style="font-weight:600;max-width:200px" title="'+reason+'"><i class="ti ti-chevron-right" id="icon_'+rid+'" style="font-size:11px;margin-right:6px;color:var(--hint);transition:transform .15s"></i>'+reason+'</td>'
+    var onclk='toggleSub("'+rid+'")';
+    return '<tr style="cursor:pointer" onclick="'+onclk+'">'
+      +'<td style="font-weight:600;max-width:200px" title="'+reason+'">'
+      +'<i class="ti ti-chevron-right" id="icon_'+rid+'" style="font-size:11px;margin-right:6px;color:var(--hint);transition:transform .15s"></i>'+reason+'</td>'
       +'<td style="color:var(--muted);font-size:11px">'+subs.length+' sub-reason'+(subs.length!==1?'s':'')+'</td>'
       +'<td><div class="bar-w"><div class="bar-bg"><div class="bar-f" style="width:'+bw+'%;background:'+col+'"></div></div><span class="pct">'+bw+'%</span></div></td>'
       +'<td style="font-weight:700;color:var(--blue)">'+pct(cnt,total)+'</td>'
       +'<td style="font-weight:600">'+fmt(cnt)+'</td></tr>'
-      +'<tr id="'+rid+'" style="display:none"><td colspan="5" style="padding:0"><table style="width:100%;border-collapse:collapse">'+subRows+'</table></td></tr>';
+      +'<tr id="'+rid+'" style="display:none"><td colspan="5" style="padding:0">'
+      +'<table style="width:100%;border-collapse:collapse">'+subRows+'</table></td></tr>';
   }
 
   const thead='<table class="tbl"><thead><tr><th>Reason</th><th>Sub-reasons</th><th>Volume</th><th>Share</th><th>Count</th></tr></thead><tbody>';
@@ -824,12 +827,12 @@ function toggleMore(){
 }
 
 function toggleSub(rid){
-  const el=document.getElementById(rid);
-  const icon=document.getElementById('icon_'+rid);
+  var el=document.getElementById(rid);
+  var icon=document.getElementById('icon_'+rid);
   if(!el) return;
-  const open=el.style.display==='none'||el.style.display==='';
+  var open=el.style.display==='none'||el.style.display==='';
   el.style.display=open?'table-row':'none';
-  if(icon) icon.style.transform=open?'rotate(90deg)':'rotate(0deg)';
+  if(icon) icon.style.transform=open?'rotate(90deg)':'';
 }
 
 // ─── REFUNDS ─────────────────────────────────────────────────
