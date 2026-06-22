@@ -461,7 +461,7 @@ async function loadData(){
   if(RAW.length===0){
     document.getElementById('loadingDiv').style.display='none';
     document.querySelectorAll('.page').forEach(function(p){p.style.display='';});
-    showError();
+    showError('No data could be loaded. Make sure all 18 sheets are published to web (File > Share > Publish to web > Sheet1 > CSV) and try again.');
     return;
   }
 
@@ -479,11 +479,11 @@ async function loadData(){
   },400);
 }
 
-function showError(){
+function showError(msg){
   document.getElementById('pg-overview').innerHTML='<div class="welcome"><div class="welcome-card">'
     +'<div class="welcome-icon" style="background:var(--red-lt);color:var(--red)"><i class="ti ti-wifi-off"></i></div>'
     +'<div class="welcome-title">Could not load data</div>'
-    +'<div class="welcome-sub">This dashboard must be opened from an <strong>https://</strong> URL to fetch Google Sheets data. Opening from a local file causes CORS errors.<br><br>Deploy to GitHub Pages and open from there.</div>'
+    +'<div class="welcome-sub">'+(msg||'This dashboard must be opened from an https:// URL to fetch Google Sheets data.')+'</div>'
     +'<div class="welcome-steps"><div class="welcome-steps-title">Quick deploy steps</div>'
     +'<div class="step-row"><div class="step-num">1</div><div>Push this file to a GitHub repo as <code>index.html</code></div></div>'
     +'<div class="step-row"><div class="step-num">2</div><div>Enable GitHub Pages: Settings → Pages → main branch</div></div>'
@@ -494,20 +494,24 @@ function showError(){
 }
 
 async function fetchCSV(fileId,month){
-  // Use the published CSV export URL - works from https:// origins
-  const url='https://docs.google.com/spreadsheets/d/'+fileId+'/export?format=csv&gid=0';
-  let resp;
-  try {
-    resp = await fetch(url, {redirect:'follow'});
-  } catch(e) {
-    throw new Error('Network error: '+e.message);
+  // Try published CSV URL first (requires sheet published to web)
+  const urls = [
+    'https://docs.google.com/spreadsheets/d/'+fileId+'/export?format=csv&gid=0',
+    'https://docs.google.com/spreadsheets/d/'+fileId+'/pub?gid=0&single=true&output=csv',
+  ];
+  let lastErr = '';
+  for(const url of urls){
+    try {
+      const resp = await fetch(url, {redirect:'follow', mode:'cors'});
+      if(!resp.ok){ lastErr='HTTP '+resp.status; continue; }
+      const text = await resp.text();
+      if(text.trim().startsWith('<')){ lastErr='Got HTML'; continue; }
+      const rows = parseCSV(text);
+      if(rows.length<2) return [];
+      return rows.slice(1).map(function(r){r._month=month;return r;});
+    } catch(e){ lastErr=e.message; }
   }
-  if(!resp.ok) throw new Error('HTTP '+resp.status);
-  const text=await resp.text();
-  if(text.trim().startsWith('<')) throw new Error('Got HTML - sheet not published to web');
-  const rows=parseCSV(text);
-  if(rows.length<2) return [];
-  return rows.slice(1).map(function(r){r._month=month;return r;});
+  throw new Error(lastErr||'All fetch attempts failed');
 }
 
 function parseCSV(text){
