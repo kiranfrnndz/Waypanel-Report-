@@ -747,35 +747,51 @@ function renderCallDrivers(){
     kpiTile('amber','ti-mail','Emails',fmt(emails),pct(emails,total)+' of contacts','',null)+
     kpiTile('purple','ti-message-chatbot','Chat + AI',fmt(chats+ai),pct(chats+ai,total)+' of contacts','',null);
 
-  const dMap=new Map();
+  // Group by Reason only, store sub-reasons underneath
+  const rMap=new Map();
   main.forEach(function(r){
-    const k=(r[COL.REASON]||'Unknown').trim()+'|||'+(r[COL.SUB_REASON]||'—').trim();
-    dMap.set(k,(dMap.get(k)||0)+1);
+    const reason=(r[COL.REASON]||'Unknown').trim();
+    const sub=(r[COL.SUB_REASON]||'—').trim();
+    if(!rMap.has(reason)) rMap.set(reason,{count:0,subs:new Map()});
+    rMap.get(reason).count++;
+    const sm=rMap.get(reason).subs;
+    sm.set(sub,(sm.get(sub)||0)+1);
   });
-  const sorted=[...dMap.entries()].sort(function(a,b){return b[1]-a[1];});
-  const maxV=sorted[0]?sorted[0][1]:1;
+  const sorted=[...rMap.entries()].sort(function(a,b){return b[1].count-a[1].count;});
+  const maxV=sorted[0]?sorted[0][1].count:1;
   const barCols=['#1859A9','#1859A9','#1A7F4B','#D97706','#D97706','#B91C1C','#6D28D9','#64748B'];
 
   function makeRow(entry,idx){
-    const [key,cnt]=entry;
-    const [reason,sub]=key.split('|||');
+    const [reason,data]=entry;
+    const cnt=data.count;
     const bw=Math.round(cnt/maxV*100);
     const col=barCols[Math.min(idx,barCols.length-1)];
-    return '<tr><td style="font-weight:600;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+reason+'">'+reason+'</td>'
-      +'<td style="color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+sub+'">'+sub+'</td>'
+    const rid='sub_'+idx;
+    // Top sub-reasons sorted
+    const subs=[...data.subs.entries()].sort(function(a,b){return b[1]-a[1];});
+    const subRows=subs.map(function(s){
+      return '<tr style="background:#F8FAFC"><td style="padding-left:28px;color:var(--muted);font-size:11px;border-bottom:1px solid #F0F1F5" colspan="2"><i class="ti ti-corner-down-right" style="font-size:10px;margin-right:4px;color:var(--hint)"></i>'+s[0]+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);background:#F8FAFC;border-bottom:1px solid #F0F1F5">'+fmt(s[1])+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);background:#F8FAFC;border-bottom:1px solid #F0F1F5">'+pct(s[1],cnt)+'</td>'
+        +'<td style="background:#F8FAFC;border-bottom:1px solid #F0F1F5"></td></tr>';
+    }).join('');
+    return '<tr style="cursor:pointer" onclick="toggleSub(''+rid+'')">'
+      +'<td style="font-weight:600;max-width:200px" title="'+reason+'"><i class="ti ti-chevron-right" id="icon_'+rid+'" style="font-size:11px;margin-right:6px;color:var(--hint);transition:transform .15s"></i>'+reason+'</td>'
+      +'<td style="color:var(--muted);font-size:11px">'+subs.length+' sub-reason'+(subs.length!==1?'s':'')+'</td>'
       +'<td><div class="bar-w"><div class="bar-bg"><div class="bar-f" style="width:'+bw+'%;background:'+col+'"></div></div><span class="pct">'+bw+'%</span></div></td>'
       +'<td style="font-weight:700;color:var(--blue)">'+pct(cnt,total)+'</td>'
-      +'<td style="font-weight:600">'+fmt(cnt)+'</td></tr>';
+      +'<td style="font-weight:600">'+fmt(cnt)+'</td></tr>'
+      +'<tr id="'+rid+'" style="display:none"><td colspan="5" style="padding:0"><table style="width:100%;border-collapse:collapse">'+subRows+'</table></td></tr>';
   }
 
-  const thead='<table class="tbl"><thead><tr><th>Reason</th><th>Sub reason</th><th>Volume</th><th>Share</th><th>Count</th></tr></thead><tbody>';
+  const thead='<table class="tbl"><thead><tr><th>Reason</th><th>Sub-reasons</th><th>Volume</th><th>Share</th><th>Count</th></tr></thead><tbody>';
   const top5=sorted.slice(0,5);
   const rest=sorted.slice(5);
   document.getElementById('cdTableWrap').innerHTML=thead+top5.map(function(e,i){return makeRow(e,i);}).join('')+'</tbody></table>'
     +'<div id="restRows" style="display:none">'+thead+rest.map(function(e,i){return makeRow(e,i+5);}).join('')+'</tbody></table></div>';
 
   const mb=document.getElementById('moreBtn');
-  if(rest.length>0){mb.style.display='block';mb.innerHTML='<i class="ti ti-chevron-down"></i> Show all '+rest.length+' more drivers';}
+  if(rest.length>0){mb.style.display='block';mb.innerHTML='<i class="ti ti-chevron-down"></i> Show all '+rest.length+' more reasons';}
   else mb.style.display='none';
 
   // Lots table
@@ -804,7 +820,16 @@ function toggleMore(){
   const el=document.getElementById('restRows');
   if(el) el.style.display=moreExpanded?'block':'none';
   const btn=document.getElementById('moreBtn');
-  if(btn) btn.innerHTML=moreExpanded?'<i class="ti ti-chevron-up"></i> Show less':'<i class="ti ti-chevron-down"></i> Show all drivers';
+  if(btn) btn.innerHTML=moreExpanded?'<i class="ti ti-chevron-up"></i> Show less':'<i class="ti ti-chevron-down"></i> Show all reasons';
+}
+
+function toggleSub(rid){
+  const el=document.getElementById(rid);
+  const icon=document.getElementById('icon_'+rid);
+  if(!el) return;
+  const open=el.style.display==='none'||el.style.display==='';
+  el.style.display=open?'table-row':'none';
+  if(icon) icon.style.transform=open?'rotate(90deg)':'rotate(0deg)';
 }
 
 // ─── REFUNDS ─────────────────────────────────────────────────
