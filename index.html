@@ -496,19 +496,30 @@ function showError(msg){
 
 async function fetchCSV(fileId,month){
   const API_KEY = 'AIzaSyCtRD6K4A1ewfZIEKjY1xvcwDubl8NEw-A';
-  // Try Sheet 1 with explicit name first, then fallback to range
-  const url = 'https://sheets.googleapis.com/v4/spreadsheets/'+fileId+'/values/Sheet%201?key='+API_KEY;
-  const resp = await fetch(url);
-  if(!resp.ok){
-    const errText = await resp.text();
-    console.error('Sheet failed ['+month+'] HTTP'+resp.status+':', errText.slice(0,300));
-    throw new Error('HTTP '+resp.status+' for '+month+': '+errText.slice(0,100));
+  // Step 1: get spreadsheet metadata to find actual sheet tab name
+  const metaUrl = 'https://sheets.googleapis.com/v4/spreadsheets/'+fileId+'?key='+API_KEY+'&fields=sheets.properties.title';
+  const metaResp = await fetch(metaUrl);
+  if(!metaResp.ok){
+    const e = await metaResp.text();
+    console.error('Meta failed ['+month+']', metaResp.status, e.slice(0,200));
+    throw new Error('Meta HTTP '+metaResp.status);
   }
-  const json = await resp.json();
-  if(json.error){
-    console.error('API error ['+month+']', json.error.message);
-    throw new Error(json.error.message);
+  const meta = await metaResp.json();
+  if(meta.error) throw new Error(meta.error.message);
+  const sheetName = meta.sheets[0].properties.title;
+  console.log('['+month+'] sheet tab name:', sheetName);
+
+  // Step 2: fetch values using actual sheet name
+  const encName = encodeURIComponent(sheetName);
+  const valUrl = 'https://sheets.googleapis.com/v4/spreadsheets/'+fileId+'/values/'+encName+'?key='+API_KEY;
+  const valResp = await fetch(valUrl);
+  if(!valResp.ok){
+    const e = await valResp.text();
+    console.error('Values failed ['+month+']', valResp.status, e.slice(0,200));
+    throw new Error('Values HTTP '+valResp.status);
   }
+  const json = await valResp.json();
+  if(json.error) throw new Error(json.error.message);
   const rows = json.values||[];
   console.log('Loaded ['+month+']', rows.length, 'rows');
   if(rows.length<2) return [];
