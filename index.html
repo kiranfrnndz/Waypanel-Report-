@@ -496,7 +496,7 @@ function showError(msg){
 
 async function fetchCSV(fileId,month){
   const API_KEY = 'AIzaSyCtRD6K4A1ewfZIEKjY1xvcwDubl8NEw-A';
-  const url = 'https://sheets.googleapis.com/v4/spreadsheets/'+fileId+'/values/Sheet1?key='+API_KEY;
+  const url = 'https://sheets.googleapis.com/v4/spreadsheets/'+fileId+'/values/A%3AAE?key='+API_KEY;
   const resp = await fetch(url);
   if(!resp.ok){
     const errText = await resp.text();
