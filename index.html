@@ -494,19 +494,25 @@ function showError(msg){
 }
 
 async function fetchCSV(fileId,month){
-  // Use pub URL - this is the correct URL for sheets published to web
-  const url='https://docs.google.com/spreadsheets/d/'+fileId+'/pub?gid=0&single=true&output=csv';
-  try {
-    const resp = await fetch(url);
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    const text = await resp.text();
-    if(text.trim().startsWith('<')) throw new Error('Got HTML - check sheet is published');
-    const rows = parseCSV(text);
-    if(rows.length<2) return [];
-    return rows.slice(1).map(function(r){r._month=month;return r;});
-  } catch(e){
-    throw new Error(e.message);
+  // Try both URL formats - pub with credentials (works for published sheets in logged-in browser)
+  const urls = [
+    'https://docs.google.com/spreadsheets/d/'+fileId+'/pub?gid=0&single=true&output=csv',
+    'https://docs.google.com/spreadsheets/d/'+fileId+'/export?format=csv&id='+fileId,
+    'https://docs.google.com/spreadsheets/d/'+fileId+'/gviz/tq?tqx=out:csv&sheet=Sheet1',
+  ];
+  for(const url of urls){
+    try {
+      const resp = await fetch(url, {credentials:'include'});
+      if(!resp.ok) continue;
+      const text = await resp.text();
+      if(text.trim().startsWith('<')) continue;
+      if(text.trim().length < 10) continue;
+      const rows = parseCSV(text);
+      if(rows.length<2) continue;
+      return rows.slice(1).map(function(r){r._month=month;return r;});
+    } catch(e){ continue; }
   }
+  throw new Error('Could not fetch sheet '+fileId);
 }
 
 function parseCSV(text){
