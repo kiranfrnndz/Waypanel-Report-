@@ -458,10 +458,11 @@ async function loadData(){
   document.getElementById('loadProg').textContent='Processing '+RAW.length.toLocaleString()+' rows...';
   document.getElementById('loadBar').style.width='95%';
 
+  console.log('Total RAW rows loaded:', RAW.length, 'from', toLoad.length, 'sheets');
   if(RAW.length===0){
     document.getElementById('loadingDiv').style.display='none';
     document.querySelectorAll('.page').forEach(function(p){p.style.display='';});
-    showError('No data could be loaded. Make sure all 18 sheets are published to web (File > Share > Publish to web > Sheet1 > CSV) and try again.');
+    showError('No data could be loaded. RAW=0. Check console for details.');
     return;
   }
 
@@ -497,10 +498,18 @@ async function fetchCSV(fileId,month){
   const API_KEY = 'AIzaSyCtRD6K4A1ewfZIEKjY1xvcwDubl8NEw-A';
   const url = 'https://sheets.googleapis.com/v4/spreadsheets/'+fileId+'/values/Sheet1?key='+API_KEY;
   const resp = await fetch(url);
-  if(!resp.ok) throw new Error('Sheets API HTTP '+resp.status+' for '+fileId);
+  if(!resp.ok){
+    const errText = await resp.text();
+    console.error('Sheet failed ['+month+']', resp.status, errText.slice(0,200));
+    throw new Error('HTTP '+resp.status+' for '+month);
+  }
   const json = await resp.json();
-  if(json.error) throw new Error(json.error.message);
+  if(json.error){
+    console.error('API error ['+month+']', json.error.message);
+    throw new Error(json.error.message);
+  }
   const rows = json.values||[];
+  console.log('Loaded ['+month+']', rows.length, 'rows');
   if(rows.length<2) return [];
   return rows.slice(1).map(function(r){r._month=month;return r;});
 }
